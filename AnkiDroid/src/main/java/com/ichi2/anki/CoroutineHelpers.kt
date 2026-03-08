@@ -360,7 +360,6 @@ suspend fun <T> FragmentActivity.withProgress(
     extractProgress: ProgressContext.() -> Unit,
     onCancel: ((Backend) -> Unit)? = { it.setWantsAbort() },
     @StringRes manualCancelButton: Int? = null,
-    cancelOnTouchOutside: Boolean = true,
     op: suspend () -> T,
 ): T {
     val backend = CollectionManager.getBackend()
@@ -375,7 +374,6 @@ suspend fun <T> FragmentActivity.withProgress(
                 null
             },
         manualCancelButton = manualCancelButton,
-        cancelOnTouchOutside = cancelOnTouchOutside,
     ) { dialog ->
         backend.withProgress(
             extractProgress = extractProgress,
@@ -395,13 +393,11 @@ suspend fun <T> FragmentActivity.withProgress(
  */
 suspend fun <T> Activity.withProgress(
     message: String = resources.getString(R.string.dialog_processing),
-    cancelOnTouchOutside: Boolean = true,
     op: suspend () -> T,
 ): T =
     withProgressDialog(
         context = this@withProgress,
         onCancel = null,
-        cancelOnTouchOutside = cancelOnTouchOutside,
     ) { dialog ->
         @Suppress("Deprecation") // ProgressDialog deprecation
         dialog.setMessage(message)
@@ -411,29 +407,25 @@ suspend fun <T> Activity.withProgress(
 /** @see withProgress(String, ...) */
 suspend fun <T> Fragment.withProgress(
     message: String = getString(R.string.dialog_processing),
-    cancelOnTouchOutside: Boolean = true,
     block: suspend () -> T,
-): T = requireActivity().withProgress(message, cancelOnTouchOutside, block)
+): T = requireActivity().withProgress(message, block)
 
 /** @see withProgress(String, ...) */
 suspend fun <T> Activity.withProgress(
     @StringRes messageId: Int,
-    cancelOnTouchOutside: Boolean = true,
     block: suspend () -> T,
-): T = withProgress(resources.getString(messageId), cancelOnTouchOutside, block)
+): T = withProgress(resources.getString(messageId), block)
 
 /** @see withProgress(String, ...) */
 suspend fun <T> Fragment.withProgress(
     @StringRes messageId: Int,
-    cancelOnTouchOutside: Boolean = true,
     block: suspend () -> T,
-): T = requireActivity().withProgress(messageId, cancelOnTouchOutside, block)
+): T = requireActivity().withProgress(messageId, block)
 
 @Suppress("Deprecation") // ProgressDialog deprecation
 suspend fun <T> withProgressDialog(
     context: Activity,
     onCancel: (() -> Unit)?,
-    cancelOnTouchOutside: Boolean = true,
     delayMillis: Long = 600,
     @StringRes manualCancelButton: Int? = null,
     op: suspend (android.app.ProgressDialog) -> T,
@@ -442,9 +434,9 @@ suspend fun <T> withProgressDialog(
         val dialog =
             android.app.ProgressDialog(context, R.style.AppCompatProgressDialogStyle).apply {
                 setCancelable(onCancel != null)
-                setCanceledOnTouchOutside(cancelOnTouchOutside)
                 if (manualCancelButton != null) {
                     setCancelable(false)
+                    setCanceledOnTouchOutside(false)
                     setButton(DialogInterface.BUTTON_NEGATIVE, context.getString(manualCancelButton)) { _, _ ->
                         Timber.i("Progress dialog cancelled via cancel button")
                         onCancel?.let { it() }
